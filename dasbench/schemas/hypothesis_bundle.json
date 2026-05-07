@@ -1,0 +1,56 @@
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "hypothesis_bundle",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Short name for the proposed hidden-rule hypothesis"
+        },
+        "rule_summary": {
+          "type": "string",
+          "description": "Concrete explanation of the latent distributional rule this candidate will test and exploit"
+        },
+        "evidence_to_measure": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Training-data evidence analyze.py should measure to validate or parameterize the hypothesis"
+        },
+        "solver_strategy": {
+          "type": "string",
+          "description": "How solution.py should exploit the hypothesis if analysis supports it"
+        },
+        "expected_failure_modes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ways this hypothesis could be wrong or fail on validation/test instances"
+        },
+        "diversity_key": {
+          "type": "string",
+          "description": "Stable lowercase key for the broad hypothesis class, used to preserve beam diversity"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Brief rationale for why this hypothesis is worth testing"
+        }
+      },
+      "required": [
+        "title",
+        "rule_summary",
+        "evidence_to_measure",
+        "solver_strategy",
+        "expected_failure_modes",
+        "diversity_key",
+        "notes"
+      ]
+    }
+  }
+}

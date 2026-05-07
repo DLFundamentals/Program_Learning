@@ -1,0 +1,26 @@
+[project]
+name = "dasbench"
+version = "0.1.0"
+description = "Unified distribution-aware algorithm synthesis benchmark for hard combinatorial problems"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "hermax>=1.1.1",
+    "matplotlib>=3.10.7",
+    "openai>=2.24.0",
+    "ortools>=9.11.4210",
+    "python-sat>=1.8.dev17",
+    "python-dotenv>=1.2.1",
+    "gurobipy>=13.0.1",
+    "highspy>=1.14.0",
+    "pyscipopt>=6.1.0",
+    "tqdm>=4.67.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

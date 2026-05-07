@@ -1,0 +1,84 @@
+{
+  "metadata": {
+    "calibration_run_id": "second_scale_v2_calibration_wall_v1",
+    "calibration_target": "gurobi_timed wall runtime mean in the 3-5 second band on focused probe instances",
+    "notes_by_target": {
+      "maxsat/latent_backdoor_mixture_v1": "Closest available point from the focused probes. This family showed sharp seed sensitivity around the transition band.",
+      "mis/motif_bridge_mixture_v1": "Closest available point from the focused probes. This family showed sharp seed sensitivity around the transition band."
+    }
+  },
+  "instance_params_by_target": {
+    "coloring/cluster_ring_mix_v1": {
+      "num_vertices": 169
+    },
+    "coloring/planted_palette_overlap_v1": {
+      "num_vertices": 340
+    },
+    "coloring/separator_palette_trap_v1": {
+      "num_vertices": 238
+    },
+    "maxsat/community_parity_overlay_v1": {
+      "num_clauses": 960,
+      "num_variables": 240
+    },
+    "maxsat/last_clause_signal_v1": {
+      "num_clauses": 1120,
+      "num_variables": 280
+    },
+    "maxsat/latent_backdoor_mixture_v1": {
+      "num_clauses": 512,
+      "num_variables": 128
+    },
+    "mdkp/decoy_complement_mixture_v1": {
+      "num_items": 1040,
+      "num_resources": 48
+    },
+    "mdkp/latent_class_knapsack_v1": {
+      "num_items": 520,
+      "num_resources": 32
+    },
+    "mdkp/single_resource_density_v1": {
+      "num_items": 1040,
+      "num_resources": 48
+    },
+    "mds/gateway_overlap_cover_v1": {
+      "num_vertices": 2800
+    },
+    "mds/geometric_cluster_cover_v1": {
+      "num_vertices": 1600
+    },
+    "mds/star_cluster_cover_v1": {
+      "num_vertices": 2800
+    },
+    "mis/clique_path_mix_v1": {
+      "num_vertices": 190
+    },
+    "mis/core_fringe_trap_v1": {
+      "num_vertices": 1000
+    },
+    "mis/motif_bridge_mixture_v1": {
+      "num_vertices": 195
+    },
+    "packing_lp/block_coupled_resource_v1": {
+      "num_items": 1200,
+      "num_resources": 40
+    },
+    "packing_lp/latent_active_basis_v1": {
+      "num_items": 1200,
+      "num_resources": 40
+    },
+    "packing_lp/single_bottleneck_fractional_v1": {
+      "num_items": 1200,
+      "num_resources": 40
+    },
+    "tsp/clustered_euclidean_v1": {
+      "num_cities": 120
+    },
+    "tsp/latent_metric_mixture_v1": {
+      "num_cities": 120
+    },
+    "tsp/paired_ribbon_zigzag_v1": {
+      "num_cities": 320
+    }
+  }
+}

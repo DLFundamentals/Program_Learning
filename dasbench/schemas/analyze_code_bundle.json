@@ -1,0 +1,25 @@
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "analyze_code_bundle",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "analyze_py": {
+          "type": "string",
+          "description": "Full contents of analyze.py"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Brief explanation of what the analysis computes and why"
+        }
+      },
+      "required": [
+        "analyze_py",
+        "notes"
+      ]
+    }
+  }
+}

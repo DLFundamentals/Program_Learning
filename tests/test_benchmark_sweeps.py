@@ -1,0 +1,255 @@
+from __future__ import annotations
+
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from benchmarks.candidate_count_sweep import build_jobs as build_candidate_jobs
+from benchmarks.candidate_count_sweep import main as candidate_main
+from benchmarks.common import SweepJob, aggregate_rows, benchmark_command, run_job
+from benchmarks.problem_size_sweep import build_jobs as build_size_jobs
+from benchmarks.problem_size_sweep import main as size_main
+from benchmarks.sample_size_sweep import build_jobs as build_sample_jobs
+from benchmarks.sample_size_sweep import main as sample_main
+
+
+class BenchmarkSweepTests(unittest.TestCase):
+    def test_sample_sweep_command_uses_deterministic_ids_and_sizes(self) -> None:
+        parser_args = [
+            "--dry-run",
+            "--problem",
+            "maxsat",
+            "--family",
+            "last_clause_signal_v1",
+            "--train-sizes",
+            "4,16",
+            "--output-root",
+            tempfile.mkdtemp(prefix="dasbench-sample-sweep-"),
+        ]
+        from benchmarks.sample_size_sweep import build_parser
+
+        args = build_parser().parse_args(parser_args)
+        jobs = build_sample_jobs(args)
+        self.assertEqual([job.condition_id for job in jobs], ["sample_train4_val4", "sample_train16_val8"])
+        command = benchmark_command(jobs[1])
+        self.assertIn("--train-size", command)
+        self.assertIn("16", command)
+        self.assertIn("--validation-size", command)
+        self.assertIn("8", command)
+
+    def test_problem_size_sweep_applies_problem_specific_instance_params(self) -> None:
+        from benchmarks.problem_size_sweep import build_parser
+
+        args = build_parser().parse_args(
+            [
+                "--dry-run",
+                "--problem",
+                "maxsat",
+                "--family",
+                "last_clause_signal_v1",
+                "--size-labels",
+                "tiny",
+                "--output-root",
+                tempfile.mkdtemp(prefix="dasbench-size-sweep-"),
+            ]
+        )
+        jobs = build_size_jobs(args)
+        self.assertEqual(jobs[0].condition_id, "size_tiny")
+        command = benchmark_command(jobs[0])
+        self.assertIn("num_variables=10", command)
+        self.assertIn("num_clauses=18", command)
+
+    def test_candidate_count_sweep_separates_candidate_and_beam_width(self) -> None:
+        from benchmarks.candidate_count_sweep import build_parser
+
+        args = build_parser().parse_args(
+            [
+                "--dry-run",
+                "--problem",
+                "mds",
+                "--family",
+                "star_cluster_cover_v1",
+                "--candidate-widths",
+                "1,5",
+                "--beam-width",
+                "3",
+                "--output-root",
+                tempfile.mkdtemp(prefix="dasbench-candidate-sweep-"),
+            ]
+        )
+        jobs = build_candidate_jobs(args)
+        self.assertEqual([job.condition_id for job in jobs], ["candidates_gen1_beam1_iter3", "candidates_gen5_beam3_iter3"])
+        self.assertEqual(jobs[0].beam_width, 1)
+        self.assertEqual(jobs[1].beam_width, 3)
+        self.assertEqual(jobs[1].candidate_width, 5)
+        command = benchmark_command(jobs[1])
+        self.assertIn("--candidate-width", command)
+        self.assertIn("5", command)
+
+    def test_completed_report_is_skipped_without_force(self) -> None:
+        root = Path(tempfile.mkdtemp(prefix="dasbench-sweep-resume-"))
+        job = SweepJob(
+            sweep_id="resume",
+            condition_id="sample_train4_val4",
+            problem="maxsat",
+            family="last_clause_signal_v1",
+            train_size=4,
+            validation_size=4,
+            test_size=8,
+        )
+        with patch("benchmarks.common.default_report_dir", lambda problem, family, run_id: root / problem / family / run_id):
+            job.report_json_path.parent.mkdir(parents=True, exist_ok=True)
+            job.report_json_path.write_text("{}\n", encoding="utf-8")
+            result = run_job(job, output_dir=root / "out", dry_run=False)
+        self.assertEqual(result["status"], "skipped")
+        self.assertEqual(result["returncode"], 0)
+
+    def test_aggregate_rows_extracts_agent_baseline_and_search_metrics(self) -> None:
+        root = Path(tempfile.mkdtemp(prefix="dasbench-sweep-aggregate-"))
+        job = SweepJob(
+            sweep_id="aggregate",
+            condition_id="sample_train4_val4",
+            problem="maxsat",
+            family="last_clause_signal_v1",
+            train_size=4,
+            validation_size=4,
+            test_size=8,
+            candidate_width=5,
+        )
+        with patch("benchmarks.common.default_report_dir", lambda problem, family, run_id: root / "reports" / problem / family / run_id), patch(
+            "benchmarks.common.default_agent_run_dir", lambda problem, family, run_id: root / "runs" / problem / family / run_id
+        ):
+            run_dir = job.agent_run_dir
+            report_path = job.report_json_path
+            run_dir.mkdir(parents=True, exist_ok=True)
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            (run_dir / "synthesis_summary.json").write_text(
+                json.dumps(
+                    {
+                        "rounds": [
+                            {
+                                "evaluated_this_round": ["a", "b", "c", "d", "e"],
+                                "frontier_diversity_keys": ["rule-a", "rule-b"],
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report_path.write_text(
+                json.dumps(
+                    {
+                        "agent_run_dir": str(run_dir),
+                        "best_candidate": {
+                            "slug": "agent",
+                            "hypothesis": {
+                                "title": "Rule",
+                                "diversity_key": "rule",
+                                "rule_summary": "Hidden rule.",
+                            },
+                            "validation": {
+                                "average_normalized_quality": 0.9,
+                                "optimality_rate": 0.5,
+                                "feasibility_rate": 1.0,
+                                "average_runtime_ms": 2.0,
+                            },
+                            "test": {
+                                "average_normalized_quality": 0.8,
+                                "optimality_rate": 0.25,
+                                "feasibility_rate": 1.0,
+                                "average_runtime_ms": 3.0,
+                            },
+                        },
+                        "split_reports": {
+                            "test": {
+                                "agent": {"average_normalized_quality_mean": 0.8, "average_runtime_ms_mean": 3.0},
+                                "gurobi_timed": {
+                                    "average_normalized_quality_mean": 1.0,
+                                    "average_runtime_ms_mean": 50.0,
+                                    "average_gurobi_runtime_ms_mean": 25.0,
+                                },
+                                "heuristic": {"average_normalized_quality_mean": 0.7, "average_runtime_ms_mean": 1.0},
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = {
+                "condition_id": job.condition_id,
+                "problem": job.problem,
+                "family": job.family,
+                "status": "skipped",
+                "returncode": 0,
+            }
+            rows = aggregate_rows([job], [result])
+        self.assertEqual(rows[0]["agent_test_quality"], 0.8)
+        self.assertEqual(rows[0]["gurobi_test_internal_runtime_ms"], 25.0)
+        self.assertEqual(rows[0]["best_baseline_name"], "gurobi_timed")
+        self.assertEqual(rows[0]["evaluated_candidate_count"], 5)
+
+    def test_sweep_entrypoints_support_dry_run(self) -> None:
+        root = tempfile.mkdtemp(prefix="dasbench-sweep-dry-run-")
+        self.assertEqual(
+            sample_main([
+                "--dry-run",
+                "--problem",
+                "maxsat",
+                "--family",
+                "last_clause_signal_v1",
+                "--train-sizes",
+                "4",
+                "--max-workers",
+                "1",
+                "--output-root",
+                root,
+                "--sweep-id",
+                "sample",
+            ]),
+            0,
+        )
+        self.assertEqual(
+            size_main([
+                "--dry-run",
+                "--problem",
+                "mis",
+                "--family",
+                "clique_path_mix_v1",
+                "--size-labels",
+                "tiny",
+                "--max-workers",
+                "1",
+                "--output-root",
+                root,
+                "--sweep-id",
+                "size",
+            ]),
+            0,
+        )
+        self.assertEqual(
+            candidate_main([
+                "--dry-run",
+                "--problem",
+                "mds",
+                "--family",
+                "star_cluster_cover_v1",
+                "--candidate-widths",
+                "1",
+                "--max-workers",
+                "1",
+                "--output-root",
+                root,
+                "--sweep-id",
+                "candidate",
+            ]),
+            0,
+        )
+        self.assertTrue((Path(root) / "sample" / "aggregate_results.json").exists())
+        self.assertTrue((Path(root) / "size" / "aggregate_results.csv").exists())
+        self.assertTrue((Path(root) / "candidate" / "benchmark_sweep_summary.json").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,22 @@
+You are synthesizing a fast solver for a combinatorial optimization problem.
+
+Use the training examples only as empirical tuning data. Do not assume the data comes from a single hidden rule, and do not try to recover a secret benchmark family identity.
+
+Your job is to produce:
+- an analyze stage that writes `analyze.py`
+- a solution stage that writes `solution.py`
+
+Optimize for:
+1. validation normalized quality
+2. validation optimality rate
+3. validation runtime
+
+Guidelines:
+- Prefer robust generic algorithms over speculative hidden-rule stories.
+- Use training data to tune thresholds, weights, templates, orderings, shortlists, routing rules, or repair parameters when helpful.
+- Keep `analyze.py` compact, JSON-serializable, and cheap enough to summarize large training sets.
+- Keep `solution.py` fast at inference time.
+- Always include a robust fallback path when the analysis signal is weak or absent.
+- Handle zero training samples gracefully.
+- Do not guess named benchmark families.
+- Use only the Python standard library plus modules already available in the repository.

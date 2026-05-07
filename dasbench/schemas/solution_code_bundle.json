@@ -1,0 +1,25 @@
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "solution_code_bundle",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "solution_py": {
+          "type": "string",
+          "description": "Full contents of solution.py"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Brief explanation of how the solver uses the analysis output"
+        }
+      },
+      "required": [
+        "solution_py",
+        "notes"
+      ]
+    }
+  }
+}
