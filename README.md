@@ -7,7 +7,7 @@
 <p align="center">
   <a href="#install"><img alt="Python" src="https://img.shields.io/badge/python-3.x-blue.svg"></a>
   <a href="https://github.com/DLFundamentals/distribution-aware-algorithm-design"><img alt="Status" src="https://img.shields.io/badge/status-research%20preview-orange.svg"></a>
-  <a href="#[citation](https://arxiv.org/abs/2605.14141)"><img alt="Paper" src="https://img.shields.io/badge/paper-arXiv-8A2BE2.svg"></a>
+  <a href="https://arxiv.org/abs/2605.14141"><img alt="Paper" src="https://img.shields.io/badge/paper-arXiv-8A2BE2.svg"></a>
   <a href="#license"><img alt="License" src="https://img.shields.io/badge/license-see%20repo-lightgrey.svg"></a>
 </p>
 
