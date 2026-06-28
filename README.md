@@ -103,6 +103,27 @@ For each candidate solver, the agent produces three artifacts:
 
 The agent sees only the instance format, the scoring rule, and samples. It does not see the family identity, planted rules, optimum solutions, or optimum objective values. Candidates are evaluated on public splits, ranked by quality and runtime, refined across rounds, and the best candidate is deployed.
 
+```mermaid
+flowchart LR
+    S["public samples<br/>S_pub"]:::data --> H["① Hypothesis<br/>H_c"]:::hyp
+    H --> A["② Analysis<br/>A_c"]:::ana
+    A --> SOL["③ Solver<br/>s_c"]:::sol
+    A -- "execute on train" --> HINT(["hint a_c"]):::hint
+    HINT -- "condition" --> SOL
+    SOL --> EVAL["evaluate on<br/>public splits"]:::eval
+    EVAL --> RANK["rank by<br/>(Q, O, −T)"]:::eval
+    RANK --> DEPLOY["deploy ĉ_S"]:::deploy
+    RANK -. "refine / fork / replace<br/>push runtime / push quality" .-> H
+
+    classDef data fill:#f4f4f4,stroke:#9aa,color:#333;
+    classDef hyp fill:#f7f2ff,stroke:#6e48aa,color:#4a2e86;
+    classDef ana fill:#f0f7ff,stroke:#2b67b0,color:#2b67b0;
+    classDef sol fill:#f1faf5,stroke:#2c8060,color:#2c8060;
+    classDef hint fill:#dccbf2,stroke:#6d4fb0,color:#4a2e86;
+    classDef eval fill:#f4f4f4,stroke:#9aa,color:#333;
+    classDef deploy fill:#efe7f9,stroke:#6d4fb0,color:#4a2e86;
+```
+
 ---
 
 ## What the agent compiles
@@ -161,13 +182,87 @@ On the released **private** instances (large sparse graphs, up to ~4.2M vertices
 </div>
 
 <sub><strong>Size vs. ours &gt; 1</strong> means the PACE solver returns a smaller dominating set; <strong>Speedup</strong> is how much faster ours runs. <sup>*</sup>Swats is valid on only 75/100 instances, so its size, speedup, and wins are computed on that matched subset. Exact-style baselines and Gurobi time out at the 360&nbsp;s cap; the learned ML baselines cannot run at this scale.</sub>
+
 ---
 
-## Limitations
+## 📦 Install
 
-The approach is useful only when the synthesis cost can be amortized over enough future instances. Because the solver is specialized to the sampled regime, its advantage can degrade under distribution shift. The method should therefore be viewed as complementary to general-purpose solvers, not a replacement for them.
+```bash
+uv sync
+```
 
-The search space is also rich: different runs may recover different hints, and some candidates may exploit brittle shortcuts. For that reason, verification, repair, fallback, and shift monitoring are part of the intended deployment story.
+For the LLM generator, set the OpenAI-compatible environment variables (see `.env.example`):
+
+```bash
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+OPENAI_MODEL=gpt-5.2
+OPENAI_REASONING_EFFORT=xhigh
+# Optional, for OpenAI-compatible endpoints:
+# OPENAI_BASE_URL=https://api.openai.com/v1
+```
+
+The **template generator** is fully local and needs no API key — the recommended smoke-test path.
+
+---
+
+## 🚀 Quickstart
+
+**Generate a dataset** (exact optima are stored with each instance):
+
+```bash
+python main.py generate \
+  --problem mis \
+  --family motif_bridge_mixture_v1 \
+  --dataset-id smoke_mis \
+  --instance-param num_vertices=18 \
+  --train-size 32 --validation-size 16 --test-size 16
+```
+
+**Run baselines plus synthesis** on that dataset:
+
+```bash
+python main.py run-agent \
+  --dataset-dir artifacts/datasets/mis/motif_bridge_mixture_v1/smoke_mis \
+  --generator template \
+  --mode beam --iterations 3 --beam-width 3
+```
+
+**Run the full flow end to end** for one family:
+
+```bash
+python main.py benchmark \
+  --problem mds --family gateway_overlap_cover_v1 \
+  --generator template \
+  --train-size 64 --validation-size 32 --test-size 32
+```
+
+**Or sweep every family** for a problem, or across all problems (parallel by default):
+
+```bash
+python main.py benchmark --problem maxsat --all-families
+python main.py benchmark --all-families --max-parallel 4
+```
+
+> Paper-facing sweeps and the PACE 2025 diagnostic live in [`benchmarks/README.md`](benchmarks/README.md) and [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md).
+
+---
+
+## 📁 Repository layout
+
+```
+Program_Learning/
+├── dasbench/            # core framework: problems, families, baselines, exact solvers, synthesis loop
+│   └── prompts/         # LLM system prompt used by the generator
+├── benchmarks/          # paper-facing sweep suites and ablations
+├── scripts/             # helper scripts
+├── tests/               # test suite
+├── main.py              # CLI entry point: generate / run-agent / report / benchmark
+├── REPRODUCIBILITY.md   # full reproduction notes incl. PACE 2025 diagnostic
+├── pyproject.toml
+└── .env.example
+```
+
+Generated datasets, candidates, and reports are written under `artifacts/` and are intentionally **not** committed — regenerate them with the commands above.
 
 ---
 
