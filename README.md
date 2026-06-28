@@ -130,12 +130,37 @@ The synthesized solvers are not merely faster implementations of the same algori
 
 ---
 
-## External test: PACE 2025 Dominating Set
+## External test — PACE 2025 Dominating Set
 
-On the released private instances from the **PACE 2025 Dominating Set** track — large sparse graphs with up to roughly 4.2 million vertices — the synthesized solver is fully valid on all 100 instances and runs about two orders of magnitude faster than the released competition solvers, while producing sets only about 3% larger.
+On the released **private** instances (large sparse graphs, up to ~4.2M vertices), the synthesized solver is the only method that is **both fully valid and fast**: valid on all 100 graphs and ~two orders of magnitude faster than the released competition solvers, for only ~3% larger sets. No baseline dominates it on the quality–runtime frontier.
 
-This is the intended regime: repeated structured instances where a specialized solver can trade a small amount of objective quality for a very large runtime gain, while preserving feasibility.
+<div align="center">
 
+<table>
+<thead>
+<tr>
+<th align="left">Solver</th><th>Valid</th><th>Avg. size ↓</th><th>Size vs. ours</th><th>Time (s) ↓</th><th>Speedup</th><th>Quality wins vs. ours</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background:#efe7f9;">
+<td align="left"><strong>GPT-5.2 (ours)</strong></td><td>100 / 100</td><td>231,595</td><td>1.00×</td><td><strong>2.89</strong></td><td><strong>1.0×</strong></td><td>—</td>
+</tr>
+<tr style="background:#f6f2fc;">
+<td align="left"><strong>Gemma&nbsp;4 (ours)</strong></td><td>100 / 100</td><td>231,667</td><td>1.00×</td><td>6.03</td><td>2.1×</td><td>—</td>
+</tr>
+<tr><td align="left">AEG Heidelberg</td><td>100 / 100</td><td>224,086</td><td>1.034×</td><td>350.14</td><td>121.0×</td><td>99 / 100</td></tr>
+<tr><td align="left">Fontan–Verger</td><td>100 / 100</td><td>224,107</td><td>1.033×</td><td>286.24</td><td>98.9×</td><td>100 / 100</td></tr>
+<tr><td align="left">Root</td><td>100 / 100</td><td>224,108</td><td>1.033×</td><td>360.42</td><td>124.5×</td><td>100 / 100</td></tr>
+<tr><td align="left">Shadoks</td><td>100 / 100</td><td>224,306</td><td>1.032×</td><td>316.07</td><td>109.2×</td><td>100 / 100</td></tr>
+<tr><td align="left">Greeduce</td><td>100 / 100</td><td>224,699</td><td>1.031×</td><td>300.86</td><td>104.0×</td><td>91 / 100</td></tr>
+<tr><td align="left">Swats <sup>*</sup></td><td>75 / 100</td><td>210,237</td><td>1.028×</td><td>218.11</td><td>75.4×</td><td>75 / 75</td></tr>
+</tbody>
+</table>
+
+</div>
+
+<sub><strong>Size vs. ours &gt; 1</strong> means the PACE solver returns a smaller dominating set; <strong>Speedup</strong> is how much faster ours runs. <sup>*</sup>Swats is valid on only 75/100 instances, so its size, speedup, and wins are computed on that matched subset. Exact-style baselines and Gurobi time out at the 360&nbsp;s cap; the learned ML baselines cannot run at this scale.</sub>
 ---
 
 ## Limitations
