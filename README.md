@@ -141,15 +141,52 @@ The solvers aren't just faster versions of the same algorithm — they often dis
 
 <div align="center">
 
-| Problem structure | Generic exact search | Generated solver behavior |
-| :-- | :-: | :-- |
-| MAXSAT with latent Boolean rules | $O^*(2^v)$ | Seeded assignment plus bounded local repair |
-| Coloring with planted palettes | $O^*(\kappa^n)$ | Template recovery plus DSATUR-style recoloring |
-| MIS with motif structure | $O^*(2^n)$ | Greedy decomposition plus tiny residual enumeration |
-| MDS with coverage kernels | $O^*(2^n)$ | Hub/gateway cover plus bounded pruning |
-| MDKP with recurring bottlenecks | $O^*(2^N)$ | Surrogate prices, density sorting, and repair |
-| Packing LP with active constraints | $\mathrm{poly}(N, m)$ | Infer binding resources, use specialized pricing |
-| TSP with latent geometry | $O(n^2\,2^n)$ | Structured construction plus bounded 2-opt |
+<table>
+<thead>
+<tr>
+<th align="left">Problem structure</th>
+<th align="center">Generic exact search</th>
+<th align="left">Generated solver behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">MAXSAT with latent Boolean rules</td>
+<td align="center"><em>O</em><sup>*</sup>(2<sup>v</sup>)</td>
+<td align="left">Seeded assignment plus bounded local repair</td>
+</tr>
+<tr>
+<td align="left">Coloring with planted palettes</td>
+<td align="center"><em>O</em><sup>*</sup>(&kappa;<sup>n</sup>)</td>
+<td align="left">Template recovery plus DSATUR-style recoloring</td>
+</tr>
+<tr>
+<td align="left">MIS with motif structure</td>
+<td align="center"><em>O</em><sup>*</sup>(2<sup>n</sup>)</td>
+<td align="left">Greedy decomposition plus tiny residual enumeration</td>
+</tr>
+<tr>
+<td align="left">MDS with coverage kernels</td>
+<td align="center"><em>O</em><sup>*</sup>(2<sup>n</sup>)</td>
+<td align="left">Hub/gateway cover plus bounded pruning</td>
+</tr>
+<tr>
+<td align="left">MDKP with recurring bottlenecks</td>
+<td align="center"><em>O</em><sup>*</sup>(2<sup>N</sup>)</td>
+<td align="left">Surrogate prices, density sorting, and repair</td>
+</tr>
+<tr>
+<td align="left">Packing LP with active constraints</td>
+<td align="center">poly(<em>N</em>, <em>m</em>)</td>
+<td align="left">Infer binding resources and use specialized pricing</td>
+</tr>
+<tr>
+<td align="left">TSP with latent geometry</td>
+<td align="center"><em>O</em>(<em>n</em><sup>2</sup> · 2<sup>n</sup>)</td>
+<td align="left">Structured construction plus bounded 2-opt</td>
+</tr>
+</tbody>
+</table>
 
 </div>
 
