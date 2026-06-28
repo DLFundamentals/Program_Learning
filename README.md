@@ -116,11 +116,11 @@ The synthesized solvers are not merely faster implementations of the same algori
 <tr><th align="left">Problem structure</th><th>Generic search</th><th align="left">Generated solver behavior</th></tr>
 </thead>
 <tbody>
-<tr><td align="left">MAXSAT with latent Boolean rules</td><td><code>O*(2^v)</code></td><td align="left">Seeded assignment plus bounded local repair</td></tr>
-<tr><td align="left">Coloring with planted palettes</td><td><code>O*(κ^n)</code></td><td align="left">Template recovery plus DSATUR-style recoloring</td></tr>
-<tr><td align="left">MIS with motif structure</td><td><code>O*(2^n)</code></td><td align="left">Greedy decomposition plus tiny residual enumeration</td></tr>
-<tr><td align="left">MDS with coverage kernels</td><td><code>O*(2^n)</code></td><td align="left">Hub/gateway cover plus bounded pruning</td></tr>
-<tr><td align="left">Packing / MDKP with bottlenecks</td><td><code>O*(2^N)</code></td><td align="left">Surrogate prices, density sorting, and repair</td></tr>
+<tr><td align="left">MAXSAT with latent Boolean rules</td><td><code>O(2^v)</code></td><td align="left">Seeded assignment plus bounded local repair</td></tr>
+<tr><td align="left">Coloring with planted palettes</td><td><code>O(κ^n)</code></td><td align="left">Template recovery plus DSATUR-style recoloring</td></tr>
+<tr><td align="left">MIS with motif structure</td><td><code>O(2^n)</code></td><td align="left">Greedy decomposition plus tiny residual enumeration</td></tr>
+<tr><td align="left">MDS with coverage kernels</td><td><code>O(2^n)</code></td><td align="left">Hub/gateway cover plus bounded pruning</td></tr>
+<tr><td align="left">Packing / MDKP with bottlenecks</td><td><code>O(2^N)</code></td><td align="left">Surrogate prices, density sorting, and repair</td></tr>
 <tr><td align="left">TSP with latent geometry</td><td><code>O(n²·2^n)</code></td><td align="left">Structured construction plus bounded 2-opt</td></tr>
 </tbody>
 </table>
