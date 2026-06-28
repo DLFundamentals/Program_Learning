@@ -144,10 +144,10 @@ On the released **private** instances (large sparse graphs, up to ~4.2M vertices
 </thead>
 <tbody>
 <tr style="background:#efe7f9;">
-<td align="left"><strong>GPT-5.2 (ours)</strong></td><td>100 / 100</td><td>231,595</td><td>1.00×</td><td><strong>2.89</strong></td><td><strong>1.0×</strong></td><td>—</td>
+<td align="left"><strong>Our agent (GPT-5.2)</strong></td><td>100 / 100</td><td>231,595</td><td>1.00×</td><td><strong>2.89</strong></td><td><strong>1.0×</strong></td><td>—</td>
 </tr>
 <tr style="background:#f6f2fc;">
-<td align="left"><strong>Gemma&nbsp;4 (ours)</strong></td><td>100 / 100</td><td>231,667</td><td>1.00×</td><td>6.03</td><td>2.1×</td><td>—</td>
+<td align="left"><strong>Our agent (Gemma&nbsp;4)</strong></td><td>100 / 100</td><td>231,667</td><td>1.00×</td><td>6.03</td><td>2.1×</td><td>—</td>
 </tr>
 <tr><td align="left">AEG Heidelberg</td><td>100 / 100</td><td>224,086</td><td>1.034×</td><td>350.14</td><td>121.0×</td><td>99 / 100</td></tr>
 <tr><td align="left">Fontan–Verger</td><td>100 / 100</td><td>224,107</td><td>1.033×</td><td>286.24</td><td>98.9×</td><td>100 / 100</td></tr>
