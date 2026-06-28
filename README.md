@@ -29,7 +29,7 @@
 
 ## Overview
 
-Hard optimization problems are rarely solved once. They run again and again inside routers, schedulers, compilers, allocators, and online services — and in deployment they never see arbitrary worst-case inputs. They see a recurring **distribution** of instances.
+Hard optimization problems are rarely solved once. They run again and again inside routers, schedulers, compilers, allocators, and online services — and in deployment they rarely face arbitrary worst-case inputs. They see a recurring **distribution** of instances.
 
 That distribution carries reusable structure: latent geometry, planted assignments, recurring bottlenecks, stable hubs, hidden backdoors, active constraints. Worst-case analysis throws all of it away.
 
@@ -220,7 +220,7 @@ On the released **private** instances — large sparse graphs, up to ~4.2M verti
 
 </div>
 
-<sub><strong>Size vs. ours &gt; 1</strong> = the PACE solver returns a smaller set. <strong>Speedup</strong> = how much faster ours runs. <sup>*</sup>Swats is valid on only 75/100 instances; its numbers are on that matched subset. Exact-style baselines and Gurobi time out at the 360&nbsp;s cap; the ML baselines cannot run at this scale.</sub>
+<sub><strong>Ours / solver size &gt; 1</strong> = the PACE solver returns a smaller set. <strong>Speedup</strong> = how much faster ours runs. <sup>*</sup>Swats is valid on only 75/100 instances; its numbers are on that matched subset. Exact-style baselines and Gurobi time out at the 360&nbsp;s cap; the ML baselines cannot run at this scale.</sub>
 
 ---
 
