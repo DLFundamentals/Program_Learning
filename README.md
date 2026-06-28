@@ -1,7 +1,7 @@
 <h1 align="center">Distribution-Aware Algorithm Design with LLM Agents</h1>
 
 <p align="center">
-  <em>Learn the structure of a deployment distribution, then compile it into solver code that runs orders of magnitude faster.</em>
+  <em>Learn deployment structure. Compile faster solvers.</em>
 </p>
 
 <p align="center">
