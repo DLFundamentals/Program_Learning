@@ -1,67 +1,138 @@
-# dasbench
+<h1 align="center">Distribution-Aware Algorithm Design with LLM Agents</h1>
 
-`dasbench` is a unified benchmark framework for distribution-aware algorithm synthesis on hard combinatorial problems.
+<p align="center">
+  <em>Learn the structure hiding in your problem distribution — then compile it into a solver that runs orders of magnitude faster.</em>
+</p>
 
-The current benchmark suite supports:
+<p align="center">
+  <a href="#-install"><img alt="Python" src="https://img.shields.io/badge/python-3.x-blue.svg"></a>
+  <a href="https://github.com/DLFundamentals/Program_Learning"><img alt="Status" src="https://img.shields.io/badge/status-research%20preview-orange.svg"></a>
+  <a href="#-citation"><img alt="Paper" src="https://img.shields.io/badge/paper-preprint-8A2BE2.svg"></a>
+  <a href="#-license"><img alt="License" src="https://img.shields.io/badge/license-see%20repo-lightgrey.svg"></a>
+</p>
 
-- `coloring`
-- `maxsat`
-- `mdkp`
-- `mis`
-- `mds`
-- `packing_lp`
-- `tsp`
+<p align="center">
+  Saharsh Koganti<sup>1</sup> · Priyadarsi Mishra<sup>1</sup> · Pierfrancesco Beneventano<sup>2</sup> · Tomer Galanti<sup>1</sup><br>
+  <sub><sup>1</sup>Texas A&amp;M University &nbsp;&nbsp; <sup>2</sup>Massachusetts Institute of Technology</sub>
+</p>
 
-The framework includes:
+---
 
-- problem-specific validation, scoring, baselines, and exact solvers
-- a default-on timed Gurobi industrial baseline for all supported problems
-- distribution family registries grouped by problem
-- dataset generation with stored exact optima
-- template and LLM synthesis loops using a common candidate interface
-- organized artifacts under:
-  - `artifacts/datasets/<problem>/<family>/<dataset_id>/`
-  - `artifacts/agent_runs/<problem>/<family>/<run_id>/`
-  - `artifacts/reports/<problem>/<family>/<run_id>/`
+## What this is
 
-## Candidate Interface
+Most optimization problems are solved over and over against instances drawn from the same hidden process — a router, scheduler, compiler, or service sees a *distribution* of instances, not arbitrary worst cases. Even when the ambient problem is worst-case hard, that distribution often carries reusable structure: recurring geometry, latent decompositions, active-resource patterns, planted assignments.
 
-A candidate directory contains:
+This repository studies **distribution-aware program learning**: given only *samples* from an unknown deployment distribution, can we synthesize executable solver code that is fast on future instances while keeping solution quality high?
 
-- `analyze.py` with `analyze(train_instances, manifest=None) -> dict`
-- `solution.py` with `solve(instance, analysis=None, manifest=None) -> object`
+The central abstraction is a **solver hint** — distribution-specific structure inferred from samples and compiled into a specialized solver. The learner never sees the distribution analytically; it must discover what makes future instances easier and turn that into code:
 
-Candidate-facing instances are sanitized before analysis and inference, so stored optimum metadata is not exposed to synthesized code.
+```
+                discover                compile
+  S ~ D^n  ───────────────▶   ĥ_S   ───────────────▶   ĉ_S = Comp(ĥ_S)
+ (samples)       (learn)     (hint)     (build code)        (deployed solver)
+```
 
-For LLM-generated candidates, the run also stores `hypothesis.json`. This is the agent's explicit guess about the hidden distributional rule, the evidence its analysis should measure, and the solver strategy implied by that rule. Beam-mode LLM runs preserve hypothesis diversity before filling remaining beam slots by performance.
+`dasbench`, the framework in this repo, is a unified benchmark for **distribution-aware algorithm synthesis** on hard combinatorial problems, with an LLM code agent as the (approximate) sample → hint → solver procedure.
 
-## Install
+---
+
+## Why it matters
+
+Three access models for designing a solver against a distribution `D`:
+
+| Access model | Information about `D` | Learned representation |
+| --- | --- | --- |
+| Worst-case design | none | none |
+| Average-case complexity | `D` specified analytically | none |
+| **This work** | **samples `S ~ Dⁿ`** | **hint `ĥ_S` → solver `ĉ_S`** |
+
+We sit in the realistic middle ground: the distribution is observed only through examples. Correctness is handled by verification / repair / fallback, so the learned component is free to focus on the *shortcut* — a SAT backdoor, a graph separator, a geometric template, an active-constraint pattern — that makes deployment cheap.
+
+---
+
+## Headline results
+
+Across **21 structured combinatorial-optimization distributions** spanning **7 problem classes**, the synthesized solvers reach **mean normalized quality 0.971** while running far faster than classical and solver-backed baselines.
+
+| Comparator | Quality lift (Δ) | Runtime ratio (faster than ours) |
+| --- | :---: | :---: |
+| Fast high-quality heuristic | **+0.109** | **564.9×** |
+| Gurobi (10 s, 1 thread) | — | **345.1×** |
+| Time-limited exact backend | — | **16.9×** |
+| One-shot Codex | −0.016 (≈ tie) | **4.5×** |
+| One-shot Claude Code | +0.085 | **17.4×** |
+| Best-of-5 open model (Gemma 4) | +0.145 | 2.4× |
+
+> No single baseline is *both* faster and higher quality across the suite. The method improves the average quality–runtime frontier rather than dominating every family — it trails the strongest heuristic on TSP and the ML baseline on Coloring.
+
+**External test — PACE 2025 Dominating Set (private instances).** The synthesized solver is **valid on all 100 graphs**, runs roughly **75×–125× faster** than released competition solvers, and lands within **a few percent** of their solution size — strictly better than everything in its own speed class.
+
+See the paper for full per-target tables, iteration ablations, perturbation-robustness diagnostics, and the discovered computation patterns.
+
+---
+
+## How it works
+
+For each candidate the agent produces three things through sequential LLM calls:
+
+1. **Hypothesis** `H_c` — a structured guess about the hidden distributional rule, the evidence to measure, and the implied solver strategy.
+2. **Analysis program** `A_c` — runs once on the public training sample and compresses the evidence into a compact, reusable summary (the empirical hint `a_c`).
+3. **Solver** `s_c` — deployment code conditioned on `a_c`, with a fallback for weak or ambiguous structure.
+
+Candidates are generated in a diversity-preserving beam, evaluated on public splits, ranked lexicographically by `(quality, optimality, −runtime)`, and refined (refine / fork / replace / push runtime / push quality). The best candidate across all rounds is re-analyzed and deployed.
+
+The public view is sanitized: family identity, planted rules, optimum solutions, and optimum objective values are stripped before any synthesized code runs. The agent sees only the instance format, the scoring rule, and the samples.
+
+---
+
+## Repository layout
+
+```
+Program_Learning/
+├── dasbench/            # core framework: problems, families, baselines, exact solvers, synthesis loop
+│   └── prompts/         # LLM system prompt used by the generator
+├── benchmarks/          # paper-facing sweep suites and ablations (see benchmarks/README.md)
+├── scripts/             # helper scripts
+├── tests/               # test suite
+├── main.py              # CLI entry point: generate / run-agent / report / benchmark
+├── REPRODUCIBILITY.md   # full reproduction notes incl. PACE 2025 diagnostic
+├── pyproject.toml
+└── .env.example
+```
+
+Generated datasets, candidates, and reports are written under `artifacts/` and are intentionally **not** committed — regenerate them with the commands below.
+
+```
+artifacts/datasets/<problem>/<family>/<dataset_id>/
+artifacts/agent_runs/<problem>/<family>/<run_id>/
+artifacts/reports/<problem>/<family>/<run_id>/
+```
+
+---
+
+## 📦 Install
 
 ```bash
 uv sync
 ```
 
-Optional OpenAI API environment variables for the LLM generator:
+For the LLM generator, set the OpenAI-compatible environment variables (see `.env.example`):
 
-```dotenv
+```bash
 OPENAI_API_KEY=YOUR_OPENAI_API_KEY
 OPENAI_MODEL=gpt-5.2
 OPENAI_REASONING_EFFORT=xhigh
-# Optional for OpenAI-compatible endpoints:
+# Optional, for OpenAI-compatible endpoints:
 # OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
-## Quick Start
+The **template generator** is fully local and is the recommended smoke-test path — no API key required.
 
-Generate a MAXSAT dataset with default artifact placement:
+---
 
-```bash
-python main.py generate \
-  --problem maxsat \
-  --family latent_backdoor_mixture_v1
-```
+## 🚀 Quick start
 
-Generate a small MIS dataset explicitly:
+**Generate a dataset** (stores exact optima with each instance):
 
 ```bash
 python main.py generate \
@@ -69,117 +140,67 @@ python main.py generate \
   --family motif_bridge_mixture_v1 \
   --dataset-id smoke_mis \
   --instance-param num_vertices=18 \
-  --train-size 32 \
-  --validation-size 16 \
-  --test-size 16
+  --train-size 32 --validation-size 16 --test-size 16
 ```
 
-Run baselines plus synthesis on an existing dataset:
+**Run baselines + synthesis** on an existing dataset:
 
 ```bash
 python main.py run-agent \
   --dataset-dir artifacts/datasets/mis/motif_bridge_mixture_v1/smoke_mis \
   --generator template \
-  --mode beam \
-  --iterations 3 \
-  --beam-width 3
+  --mode beam --iterations 3 --beam-width 3
 ```
 
-Disable the default Gurobi industrial baseline or tune its limits:
-
-```bash
-python main.py run-agent \
-  --dataset-dir artifacts/datasets/mis/motif_bridge_mixture_v1/smoke_mis \
-  --no-gurobi-baseline
-```
-
-```bash
-python main.py run-agent \
-  --dataset-dir artifacts/datasets/mis/motif_bridge_mixture_v1/smoke_mis \
-  --gurobi-time-limit-seconds 30 \
-  --gurobi-threads 1
-```
-
-Enable optional external exact solvers with `auto` discovery. MaxSAT rows use Hermax for Open-WBO, UWrMaxSAT, EvalMaxSAT, and WMaxCDCL when no executable is configured. SCIP-backed rows use PySCIPOpt when no SCIP executable is configured, and HiGHS-backed rows use `highspy` when no HiGHS executable is configured. Binary paths remain supported for solvers without native Python APIs or when you explicitly want the CLI backend:
-
-```bash
-export DASBENCH_OPEN_WBO_BIN=/path/to/open-wbo
-export DASBENCH_UWRMAXSAT_BIN=/path/to/uwrmaxsat
-export DASBENCH_EVALMAXSAT_BIN=/path/to/evalmaxsat
-export DASBENCH_MAXHS_BIN=/path/to/maxhs
-export DASBENCH_WMAXCDCL_BIN=/path/to/wmaxcdcl
-export DASBENCH_KAMIS_EXACT_BIN=/path/to/kamis-exact
-export DASBENCH_SCIP_BIN=/path/to/scip
-export DASBENCH_CONCORDE_BIN=/path/to/concorde
-export DASBENCH_HIGHS_BIN=/path/to/highs
-
-python main.py run-agent \
-  --dataset-dir artifacts/datasets/maxsat/last_clause_signal_v1/smoke_maxsat \
-  --external-exact-baselines auto \
-  --external-time-limit-seconds 60 \
-  --external-threads 1
-```
-
-In `auto` mode, configured binaries take precedence. Without a configured binary, `open_wbo_exact`, `uwrmaxsat_exact`, `evalmaxsat_exact`, and `wmaxcdcl_exact` use `hermax`; `scip_*` baselines use `pyscipopt`; `highs_*` baselines use `highspy`. MaxHS, KaMIS, and Concorde remain CLI-based unless a future Python backend is available.
-
-Write a repeated benchmark report for a completed run:
+**Write a repeated benchmark report** for a completed run:
 
 ```bash
 python main.py report \
   --dataset-dir artifacts/datasets/mis/motif_bridge_mixture_v1/smoke_mis \
-  --agent-run-dir artifacts/agent_runs/mis/motif_bridge_mixture_v1/20260416_120000 \
+  --agent-run-dir artifacts/agent_runs/mis/motif_bridge_mixture_v1/<run_id> \
   --repeats 10
 ```
 
-Run the full benchmark flow end to end:
+**Run the full flow end to end** for one family:
 
 ```bash
 python main.py benchmark \
-  --problem mds \
-  --family gateway_overlap_cover_v1 \
+  --problem mds --family gateway_overlap_cover_v1 \
   --generator template \
   --instance-param num_vertices=20 \
-  --train-size 64 \
-  --validation-size 32 \
-  --test-size 32
+  --train-size 64 --validation-size 32 --test-size 32
 ```
 
-Run a TSP benchmark with the new Euclidean families:
+**Run every family** for one problem, or across all problems (parallel by default):
 
 ```bash
-python main.py benchmark \
-  --problem tsp \
-  --family latent_metric_mixture_v1 \
-  --generator template \
-  --instance-param num_cities=12 \
-  --train-size 64 \
-  --validation-size 32 \
-  --test-size 32
-```
-
-Run all families for one problem with default settings:
-
-```bash
-python main.py benchmark \
-  --problem maxsat \
-  --all-families
-```
-
-Run all registered families across all problems:
-
-```bash
-python main.py benchmark --all-families
-```
-
-Suite runs execute targets in parallel by default. You can cap concurrency if needed:
-
-```bash
+python main.py benchmark --problem maxsat --all-families
 python main.py benchmark --all-families --max-parallel 4
 ```
 
-This writes per-family datasets, agent runs, and reports under the normal artifact roots, and also writes a suite summary JSON plus per-target log files under `artifacts/reports/suites/<suite_id>/`.
+### Optional baselines
 
-Run paper-facing sweep suites from `benchmarks/`:
+The default-on timed **Gurobi** industrial baseline can be disabled or tuned:
+
+```bash
+python main.py run-agent --dataset-dir <dir> --no-gurobi-baseline
+python main.py run-agent --dataset-dir <dir> --gurobi-time-limit-seconds 30 --gurobi-threads 1
+```
+
+Optional **external exact solvers** are discovery-based via `auto`. In `auto` mode, configured binaries take precedence; without one, MaxSAT rows fall back to `hermax` (Open-WBO / UWrMaxSAT / EvalMaxSAT / WMaxCDCL), SCIP rows to `pyscipopt`, and HiGHS rows to `highspy`. MaxHS, KaMIS, and Concorde remain CLI-based.
+
+```bash
+export DASBENCH_OPEN_WBO_BIN=/path/to/open-wbo
+export DASBENCH_CONCORDE_BIN=/path/to/concorde
+# ... see .env.example for the full list
+
+python main.py run-agent \
+  --dataset-dir artifacts/datasets/maxsat/last_clause_signal_v1/smoke_maxsat \
+  --external-exact-baselines auto \
+  --external-time-limit-seconds 60 --external-threads 1
+```
+
+### Paper sweeps
 
 ```bash
 python -m benchmarks.main_paper_benchmark --max-workers 21
@@ -188,99 +209,76 @@ python -m benchmarks.problem_size_sweep --max-workers 4
 python -m benchmarks.candidate_count_sweep --max-workers 4
 ```
 
-The headline paper results use the main paper benchmark alias above, which wraps
-`benchmarks.second_scale_benchmark_v2`. Existing result artifacts use the historical internal
-condition id `seconds_scale_v2`; this is preserved for compatibility with saved runs.
+The headline paper results use `benchmarks.main_paper_benchmark` (a wrapper over `benchmarks.second_scale_benchmark_v2`). Additional ablations and the PACE 2025 diagnostic are documented in [`benchmarks/README.md`](benchmarks/README.md) and [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md).
 
-Additional ablations and the PACE 2025 diagnostic are documented in [benchmarks/README.md](benchmarks/README.md)
-and [REPRODUCIBILITY.md](REPRODUCIBILITY.md). Generated datasets, solver candidates, reports, and large
-result bundles are intentionally not committed; regenerate them with the documented commands or
-provide them through an anonymous external artifact archive.
+---
 
-## Supported Families
+## Benchmark suite
 
-### Coloring
+7 problem classes × 3 hidden distribution families = **21 targets**. Each target is a *distribution* over structured instances (not arbitrary worst cases), split into train / validation / test with stored exact optima.
 
-| Family | What It Is | Hidden Rule / Exploitable Signal |
+| Problem | Families | The exploitable signal |
 | --- | --- | --- |
-| `cluster_ring_mix_v1` | Smoke family with vertex blocks arranged as local multipartite clusters, plus ring-style bridges between neighboring blocks. | Each block has a planted 3- or 4-color palette permutation. Edges are mostly between different planted colors, and bridge edges preserve the same planted coloring. The useful rule is to infer a stable block palette/order rather than color greedily from local degree alone. |
-| `planted_palette_overlap_v1` | Paper family with overlapping block palettes and a latent regime that changes which color-pair interactions are dense. | A planted 4-coloring exists across all blocks. Blocks use shifted, overlapping palettes, and each instance samples a hidden regime that changes color-pair edge probabilities and bridge-pair density. The useful rule is to recover the planted palette structure despite overlapping local statistics. |
-| `separator_palette_trap_v1` | Paper family with block-local palette gaps and separator vertices between adjacent blocks. | Each block has a planted 4-color permutation, but one color pair is intentionally sparse inside the block. Boundary separator vertices connect across blocks while exempting specific colors, creating long-range color-reuse constraints. The useful rule is to infer the global palette/separator structure, not just local greedy choices. |
+| **Coloring** | `cluster_ring_mix_v1`, `planted_palette_overlap_v1`, `separator_palette_trap_v1` | Recover a global planted palette / separator structure instead of coloring greedily. |
+| **MAXSAT** | `last_clause_signal_v1`, `latent_backdoor_mixture_v1`, `community_parity_overlay_v1` | Anchor bits / latent backdoors determine most variables via hidden Boolean rules. |
+| **MIS** | `clique_path_mix_v1`, `motif_bridge_mixture_v1`, `core_fringe_trap_v1` | Decompose into motifs / blocks and handle bridge conflicts and core-fringe traps. |
+| **MDS** | `star_cluster_cover_v1`, `gateway_overlap_cover_v1`, `geometric_cluster_cover_v1` | Pick stable hubs / gateways for overlap-aware coverage, not raw degree. |
+| **Packing LP** | `single_bottleneck_fractional_v1`, `latent_active_basis_v1`, `block_coupled_resource_v1` | Infer the binding resource / active basis and sort by value per unit of it. |
+| **MDKP** | `single_resource_density_v1`, `latent_class_knapsack_v1`, `decoy_complement_mixture_v1` | Identify the recurring bottleneck and prefer complementary, low-pressure bundles. |
+| **TSP** | `clustered_euclidean_v1`, `paired_ribbon_zigzag_v1`, `latent_metric_mixture_v1` | Classify the latent geometry and construct tours that respect it. |
 
-### MAXSAT
+The candidate interface is intentionally minimal — each candidate directory provides:
 
-| Family | What It Is | Hidden Rule / Exploitable Signal |
-| --- | --- | --- |
-| `last_clause_signal_v1` | Smoke family where one anchor clause controls a planted assignment. | The final clause encodes a 3-bit anchor pattern on variables `1`, `2`, and `3`. Every other variable copies or negates one anchor bit according to a fixed hidden rule table. Clauses mostly agree with the induced assignment. |
-| `latent_backdoor_mixture_v1` | Paper family with three hidden regimes and regime-specific variable subsets. | Each instance samples a latent regime. Within that regime, variables `4..n` are determined by hidden Boolean functions of the three anchor bits, including single-bit and parity functions, with optional negation and small noise. Early clauses emphasize regime-specific backdoor blocks, bridge clauses emphasize different blocks, and marginal literal frequencies overlap across regimes. |
-| `community_parity_overlay_v1` | Paper family with variable communities, parity-style community rules, and sparse bridge clauses. | Variables `4..n` are partitioned into four communities. Each community shares a hidden value given by a Boolean function of the anchor bits, such as `x1`, `x2`, `x1 xor x2`, or a three-bit parity, optionally negated. Most clauses are intra-community, while bridge clauses couple specific community pairs. |
+- `analyze.py` → `analyze(train_instances, manifest=None) -> dict`
+- `solution.py` → `solve(instance, analysis=None, manifest=None) -> object`
 
-### MIS
+LLM-generated candidates additionally store `hypothesis.json`, the agent's explicit guess about the hidden rule, the evidence to measure, and the implied solver strategy.
 
-| Family | What It Is | Hidden Rule / Exploitable Signal |
-| --- | --- | --- |
-| `clique_path_mix_v1` | Smoke family with alternating clique-heavy and path-heavy blocks plus sparse bridges and noise. | A hidden two-way regime flips which block parity is clique-like versus path-like. The useful rule is to identify each block type: clique blocks contribute at most one independent-set vertex, while path blocks allow alternating selections subject to bridge edges. |
-| `motif_bridge_mixture_v1` | Paper family assembled from latent motif libraries: cliques, cycles, bicliques, crowns, sparse bridges, and light noise. | Each instance samples one of three regimes. The regime determines the motif sequence assigned to the vertex blocks. Each motif has a different MIS structure, and sparse bridge or skip edges couple adjacent motifs. The useful rule is motif-aware decomposition plus bridge handling. |
-| `core_fringe_trap_v1` | Paper family with a dense core and low-degree fringe gadgets attached to core vertices. | The core is a clique-like trap: high-degree core vertices look important but usually cannot all be selected. Fringe groups use regime-dependent path, cycle, or trap gadgets and attach to core anchors. The useful rule is to favor compatible fringe selections while accounting for which core attachments block them. |
-
-### MDS
-
-| Family | What It Is | Hidden Rule / Exploitable Signal |
-| --- | --- | --- |
-| `star_cluster_cover_v1` | Smoke family with star-like clusters and sparse hub connectors. | Each cluster has a hidden hub at the first vertex of the cluster, and those hubs dominate most of their local cluster. The useful rule is to select the stable cluster hubs; connector edges between hubs add noise but do not remove the hub-cover structure. |
-| `gateway_overlap_cover_v1` | Paper family where cluster hubs and gateway vertices create overlapping domination coverage. | Each cluster has a hub and a gateway. Gateways link to neighboring gateways and cover selected vertices in adjacent clusters, so raw degree can be misleading. The useful rule is overlap-aware coverage: combine hubs and gateways so one selected vertex can help dominate neighboring clusters. |
-| `geometric_cluster_cover_v1` | Paper family with hidden random-geometric cluster layouts, heterogeneous density, and noisy connector edges. | Each instance samples one of several geometric center layouts. Edges come from distance thresholds plus periodic connector edges. The useful rule is to infer local geometric neighborhoods and connector roles, then choose dominators by marginal coverage and redundancy rather than degree alone. |
-
-### Packing LP
-
-| Family | What It Is | Hidden Rule / Exploitable Signal |
-| --- | --- | --- |
-| `single_bottleneck_fractional_v1` | Smoke bounded multidimensional packing LP where one hidden resource is much tighter than the others. | A single recurring resource usually determines the optimal fractional cutoff. The useful rule is to infer the binding resource from capacity tightness and sort items by value per unit of that resource. |
-| `latent_active_basis_v1` | Paper LP family with hidden regimes that share similar coefficient marginals but bind different resource pairs. | Each instance samples a latent dual-price regime. Values are noisy functions of the hidden resource-price vector, and capacities make a regime-specific resource pair active. The useful rule is to infer the active basis/dual prices instead of relying on aggregate value density. |
-| `block_coupled_resource_v1` | Paper LP family with item/resource blocks and a sparse coupling resource. | Items have block-local high coefficients, but a shared coupling resource quietly limits the mix of attractive block-local choices. The useful rule is to detect block membership and penalize coupling-resource pressure. |
-
-### MDKP
-
-| Family | What It Is | Hidden Rule / Exploitable Signal |
-| --- | --- | --- |
-| `single_resource_density_v1` | Smoke multidimensional knapsack family where one resource makes simple density heuristics strong. | One hidden resource is consistently tight, while secondary resources are usually slack. The useful rule is value per unit of the recurring bottleneck with feasibility repair. |
-| `latent_class_knapsack_v1` | Paper MDKP family with hidden item classes and regime-dependent bottleneck resources. | Items come from latent resource-consumption classes, and each instance has a hidden bottleneck resource that changes which classes are valuable. The useful rule is to cluster items by weight profile, infer the current bottleneck, and prefer low-pressure classes. |
-| `decoy_complement_mixture_v1` | Paper MDKP family with high-value decoys and complementary item classes. | High-value decoys look attractive locally but consume a hidden scarce resource. Complementary classes combine better across non-scarce resources. The useful rule is to penalize scarce-resource burn and select complementary bundles rather than scalar density winners. |
-
-### TSP
-
-| Family | What It Is | Hidden Rule / Exploitable Signal |
-| --- | --- | --- |
-| `clustered_euclidean_v1` | Smoke Euclidean TSP family with balanced city clusters arranged around a ring. | Cities are sampled around four hidden ring centers with a shared phase. The useful rule is to recover the ring/cluster geometry and build tours that respect the circular cluster order while handling short intra-cluster visits. |
-| `paired_ribbon_zigzag_v1` | Paper family with two noisy parallel ribbons, shuffled city order, and a hidden offset regime. | Cities lie on two parallel lines with either a small or larger stagger offset, and the whole structure may be transposed. The useful rule is to use PCA or clustering to recover the two ribbons, split the cities evenly, and traverse one ribbon in one direction and the other in reverse. |
-| `latent_metric_mixture_v1` | Paper family mixing ring-cluster, ribbon, and barrier-bridge geometric regimes with overlapping scale statistics. | Each instance samples one of three latent geometric regimes: ring clusters, paired ribbons, or two separated sides connected by central bridge points. The useful rule is to classify the geometry from higher-order structure and choose the corresponding tour strategy. |
+---
 
 ## Metrics
 
-All problems report:
+Every problem reports `average_normalized_quality`, `optimality_rate`, `feasibility_rate`, and `average_runtime_ms` (external exact baselines additionally report `proved_optimal_rate` and `average_external_runtime_ms`). Quality is normalized to `[0, 1]` where `1.0` is optimal and invalid/infeasible outputs score `0`:
 
-- `average_normalized_quality`
-- `optimality_rate`
-- `feasibility_rate`
-- `average_runtime_ms`
-- External exact baselines also report `proved_optimal_rate` and `average_external_runtime_ms` when enabled.
+| Problem | Normalized quality |
+| --- | --- |
+| Coloring | optimum colors / returned colors |
+| MAXSAT | satisfied / optimum satisfied clauses |
+| MIS | returned IS size / optimum IS size |
+| MDS | optimum DS size / returned DS size |
+| Packing LP, MDKP | returned objective / optimum objective |
+| TSP | optimum tour length / returned tour length |
 
-Problem-specific normalization:
+**Notes.** Exact optima are computed at generation time and stored per instance. OR-Tools is the exact backend for graph problems and the packing pair (`GLOP` for `packing_lp`, CP-SAT for `mdkp`). Gurobi is a *timed industrial baseline only* and never replaces stored-optimum generation. The LLM generator uses structured outputs and the system prompt in [`dasbench/prompts/llm_system_prompt.txt`](dasbench/prompts/llm_system_prompt.txt).
 
-- `coloring`: optimum number of colors / returned number of colors
-- `mdkp`: returned item value / optimum item value
-- `maxsat`: satisfied clauses / optimum satisfied clauses
-- `mis`: independent set size / optimum independent set size
-- `mds`: optimum dominating set size / returned dominating set size
-- `packing_lp`: returned objective / optimum objective
-- `tsp`: optimum tour length / returned tour length
+---
 
-## Notes
+## Theory in one paragraph
 
-- Exact optima are computed at dataset-generation time and stored with each instance.
-- OR-Tools is the exact backend for graph problems and the LP/IP packing pair (`GLOP` for `packing_lp`, CP-SAT for `mdkp`).
-- Gurobi is integrated as a timed industrial baseline only; it does not replace stored-optimum generation.
-- Gurobi diagnostics are written per split when enabled, for example `gurobi_timed_validation_diagnostics.jsonl`.
-- Optional external exact baselines are discovery-based and skipped in `auto` mode when binaries are missing, including HiGHS for `packing_lp` and `mdkp`.
-- The template generator is fully local and is the recommended smoke-test path.
-- The LLM generator uses structured outputs and the system prompt in [dasbench/prompts/llm_system_prompt.txt](dasbench/prompts/llm_system_prompt.txt).
+For a fixed solver library, the empirically *fastest sample-consistent* solver generalizes in both correctness and runtime: it approaches the best correct distribution-specialized solver in the class up to an `O(T_max·√(log|C|/n))` term. For identifiable hint classes with a score margin `γ`, only `O(γ⁻² log(N/δ))` samples suffice to recover the hidden hint exactly. A concrete instantiation — hidden SAT backdoors — shows samples improving *computation* without ever learning correctness: fallback preserves validity, while the recovered backdoor yields exponential per-instance speedup. Proofs are in the paper appendix.
+
+---
+
+## Limitations
+
+The one-time synthesis cost only pays off when amortized over enough future instances. Because the solver is specialized to the sampled regime, its advantage can degrade under distribution shift (a perturbation ablation in the paper quantifies this). The method is **complementary to**, not a replacement for, general-purpose solvers — and because the search explores a rich program space, different runs may recover different hints or brittle shortcuts.
+
+---
+
+## 📚 Citation
+
+If you use this work, please cite:
+
+```bibtex
+@misc{koganti2026distributionaware,
+  title  = {Distribution-Aware Algorithm Design with LLM Agents},
+  author = {Koganti, Saharsh and Mishra, Priyadarsi and Beneventano, Pierfrancesco and Galanti, Tomer},
+  year   = {2026},
+  note   = {Preprint},
+  url    = {https://github.com/DLFundamentals/Program_Learning}
+}
+```
+
+## License
+
+See the repository for license details.
