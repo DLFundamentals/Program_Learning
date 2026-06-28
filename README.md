@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="#install"><img alt="Python" src="https://img.shields.io/badge/python-3.x-blue.svg"></a>
-  <a href="https://github.com/DLFundamentals/Program_Learning"><img alt="Status" src="https://img.shields.io/badge/status-research%20preview-orange.svg"></a>
+  <a href="https://github.com/DLFundamentals/distribution-aware-algorithm-design"><img alt="Status" src="https://img.shields.io/badge/status-research%20preview-orange.svg"></a>
   <a href="#citation"><img alt="Paper" src="https://img.shields.io/badge/paper-arXiv-8A2BE2.svg"></a>
   <a href="#license"><img alt="License" src="https://img.shields.io/badge/license-see%20repo-lightgrey.svg"></a>
 </p>
@@ -279,7 +279,7 @@ python main.py benchmark --all-families --max-parallel 4
 ## Repository layout
 
 ```
-Program_Learning/
+distribution-aware-algorithm-design/
 ├── dasbench/          core framework: problems, families, baselines, synthesis loop
 │   └── prompts/       LLM system prompt used by the generator
 ├── benchmarks/        paper-facing sweep suites and ablations
