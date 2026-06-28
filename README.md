@@ -18,27 +18,27 @@
 
 ---
 
-## What this is
+## Overview
 
-Many hard optimization problems are not solved once in isolation. They appear repeatedly inside routers, schedulers, compilers, allocation systems, planning pipelines, and online services. In deployment, these systems do not face arbitrary worst-case instances; they face a recurring **distribution** of instances.
+Hard optimization problems are rarely solved once in isolation. They run again and again inside routers, schedulers, compilers, allocation systems, planning pipelines, and online services — and in deployment, these systems never face arbitrary worst-case inputs. They face a recurring **distribution** of instances.
 
-That distribution often contains reusable structure: latent geometry, planted assignments, recurring bottlenecks, stable hubs, hidden backdoors, active constraints, or repeated decomposition patterns.
+That distribution tends to carry reusable structure: latent geometry, planted assignments, recurring bottlenecks, stable hubs, hidden backdoors, active constraints, repeated decomposition patterns. Worst-case analysis throws all of it away.
 
-This repository studies **distribution-aware algorithm design**: given only samples from an unknown deployment distribution, can an agent synthesize executable solver code that is fast on future instances while preserving high solution quality?
+This repository studies **distribution-aware algorithm design** — the question of whether, given only samples from an unknown deployment distribution, an agent can synthesize executable solver code that runs fast on future instances while preserving high solution quality.
 
-The key idea is a **solver hint**: a compact piece of distribution-specific structure inferred from samples and compiled into a specialized solver.
+The central object is a **solver hint**: a compact piece of distribution-specific structure, inferred from samples and compiled into a specialized solver.
 
 $$
 \underbrace{S \sim D^n}_{\text{samples}}
-\xrightarrow{\text{learn}}
+\xrightarrow{\text{ learn }}
 \underbrace{\widehat{h}_S}_{\text{hint}}
-\xrightarrow{\text{compile}}
+\xrightarrow{\text{ compile }}
 \underbrace{\widehat{c}_S = \mathrm{Comp}(\widehat{h}_S)}_{\text{deployed solver}}
 $$
 
-The samples are not used to memorize solutions. They are used to discover what makes future instances from the same source easier to solve.
+The samples are never used to memorize solutions to the instances we've seen. They're used to discover what makes the *next* instance from the same source easier to solve.
 
-`dasbench` is a benchmark and synthesis framework for this setting. It evaluates whether an LLM code agent can move from samples → hypotheses → analysis code → deployment solvers on hard structured combinatorial problems.
+`dasbench` is the benchmark and synthesis framework for this setting. It tests whether an LLM code agent can travel the full path — samples → hypotheses → analysis code → deployment solvers — on hard, structured combinatorial problems.
 
 ---
 
