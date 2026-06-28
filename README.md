@@ -116,13 +116,13 @@ The synthesized solvers are not merely faster implementations of the same algori
 <tr><th align="left">Problem structure</th><th>Generic exact search</th><th align="left">Generated solver behavior</th></tr>
 </thead>
 <tbody>
-<tr><td align="left">MAXSAT with latent Boolean rules</td><td><code>O*(2^v)</code></td><td align="left">Seeded assignment plus bounded local repair</td></tr>
-<tr><td align="left">Coloring with planted palettes</td><td><code>O*(κ^n)</code></td><td align="left">Template recovery plus DSATUR-style recoloring</td></tr>
-<tr><td align="left">MIS with motif structure</td><td><code>O*(2^n)</code></td><td align="left">Greedy decomposition plus tiny residual enumeration</td></tr>
-<tr><td align="left">MDS with coverage kernels</td><td><code>O*(2^n)</code></td><td align="left">Hub/gateway cover plus bounded pruning</td></tr>
-<tr><td align="left">MDKP with recurring bottlenecks</td><td><code>O*(2^N)</code></td><td align="left">Surrogate prices, density sorting, and repair</td></tr>
-<tr><td align="left">Packing LP with recurring active constraints</td><td><code>poly(N, m)</code></td><td align="left">Infer active/binding resources and use specialized pricing rules</td></tr>
-<tr><td align="left">TSP with latent geometry</td><td><code>O(n^2 2^n)</code></td><td align="left">Structured construction plus bounded 2-opt</td></tr>
+<tr><td align="left">MAXSAT with latent Boolean rules</td><td><em>O</em><sup>*</sup>(2<sup>v</sup>)</td><td align="left">Seeded assignment plus bounded local repair</td></tr>
+<tr><td align="left">Coloring with planted palettes</td><td><em>O</em><sup>*</sup>(κ<sup>n</sup>)</td><td align="left">Template recovery plus DSATUR-style recoloring</td></tr>
+<tr><td align="left">MIS with motif structure</td><td><em>O</em><sup>*</sup>(2<sup>n</sup>)</td><td align="left">Greedy decomposition plus tiny residual enumeration</td></tr>
+<tr><td align="left">MDS with coverage kernels</td><td><em>O</em><sup>*</sup>(2<sup>n</sup>)</td><td align="left">Hub/gateway cover plus bounded pruning</td></tr>
+<tr><td align="left">MDKP with recurring bottlenecks</td><td><em>O</em><sup>*</sup>(2<sup>N</sup>)</td><td align="left">Surrogate prices, density sorting, and repair</td></tr>
+<tr><td align="left">Packing LP with recurring active constraints</td><td>poly(<em>N</em>, <em>m</em>)</td><td align="left">Infer active/binding resources and use specialized pricing rules</td></tr>
+<tr><td align="left">TSP with latent geometry</td><td><em>O</em>(<em>n</em><sup>2</sup> 2<sup>n</sup>)</td><td align="left">Structured construction plus bounded 2-opt</td></tr>
 </tbody>
 </table>
 
