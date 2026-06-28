@@ -26,11 +26,15 @@ This repository studies **distribution-aware program learning**: given only *sam
 
 The central abstraction is a **solver hint** — distribution-specific structure inferred from samples and compiled into a specialized solver. The learner never sees the distribution analytically; it must discover what makes future instances easier and turn that into code:
 
-```
-                discover                compile
-  S ~ D^n  ───────────────▶   ĥ_S   ───────────────▶   ĉ_S = Comp(ĥ_S)
- (samples)       (learn)     (hint)     (build code)        (deployed solver)
-```
+$$
+\underbrace{S \sim D^{\,n}}_{\text{samples}}
+\;\xrightarrow{\;\text{learn}\;}\;
+\underbrace{\widehat{h}_S}_{\text{hint}}
+\;\xrightarrow{\;\text{compile } \mathrm{Comp}\;}\;
+\underbrace{\widehat{c}_S = \mathrm{Comp}(\widehat{h}_S)}_{\text{deployed solver}}
+$$
+
+The samples are not used to predict solutions to observed instances — they are used to discover what makes *future* instances from the same source easier to solve.
 
 `dasbench`, the framework in this repo, is a unified benchmark for **distribution-aware algorithm synthesis** on hard combinatorial problems, with an LLM code agent as the (approximate) sample → hint → solver procedure.
 
@@ -38,13 +42,13 @@ The central abstraction is a **solver hint** — distribution-specific structure
 
 ## Why it matters
 
-Three access models for designing a solver against a distribution `D`:
+Three access models for designing a solver against a distribution $D$:
 
-| Access model | Information about `D` | Learned representation |
+| Access model | Information about $D$ | Learned representation |
 | --- | --- | --- |
 | Worst-case design | none | none |
-| Average-case complexity | `D` specified analytically | none |
-| **This work** | **samples `S ~ Dⁿ`** | **hint `ĥ_S` → solver `ĉ_S`** |
+| Average-case complexity | $D$ specified analytically | none |
+| **This work** | **samples $S \sim D^{\,n}$** | **hint $\widehat{h}_S \rightarrow$ solver $\widehat{c}_S$** |
 
 We sit in the realistic middle ground: the distribution is observed only through examples. Correctness is handled by verification / repair / fallback, so the learned component is free to focus on the *shortcut* — a SAT backdoor, a graph separator, a geometric template, an active-constraint pattern — that makes deployment cheap.
 
@@ -73,13 +77,13 @@ See the paper for full per-target tables, iteration ablations, perturbation-robu
 
 ## How it works
 
-For each candidate the agent produces three things through sequential LLM calls:
+For each candidate $c = (H_c, A_c, s_c)$ the agent produces three things through sequential LLM calls:
 
-1. **Hypothesis** `H_c` — a structured guess about the hidden distributional rule, the evidence to measure, and the implied solver strategy.
-2. **Analysis program** `A_c` — runs once on the public training sample and compresses the evidence into a compact, reusable summary (the empirical hint `a_c`).
-3. **Solver** `s_c` — deployment code conditioned on `a_c`, with a fallback for weak or ambiguous structure.
+1. **Hypothesis** $H_c$ — a structured guess about the hidden distributional rule, the evidence to measure, and the implied solver strategy.
+2. **Analysis program** $A_c$ — runs once on the public training sample $S_{\mathrm{tr}}^{\mathrm{pub}}$ and compresses the evidence into a compact, reusable summary, the empirical hint $a_c = A_c(S_{\mathrm{tr}}^{\mathrm{pub}})$.
+3. **Solver** $s_c$ — deployment code that maps a new instance and the hint to a solution, $z = s_c(x, a_c)$, with a fallback for weak or ambiguous structure.
 
-Candidates are generated in a diversity-preserving beam, evaluated on public splits, ranked lexicographically by `(quality, optimality, −runtime)`, and refined (refine / fork / replace / push runtime / push quality). The best candidate across all rounds is re-analyzed and deployed.
+Candidates are generated in a diversity-preserving beam, evaluated on public splits, ranked lexicographically by $(Q_{\mathrm{val}}, O_{\mathrm{val}}, -T_{\mathrm{val}})$ — validation quality, optimality, and (negative) runtime — and refined (refine / fork / replace / push runtime / push quality). The best candidate across all rounds is re-analyzed and deployed.
 
 The public view is sanitized: family identity, planted rules, optimum solutions, and optimum objective values are stripped before any synthesized code runs. The agent sees only the instance format, the scoring rule, and the samples.
 
@@ -238,16 +242,16 @@ LLM-generated candidates additionally store `hypothesis.json`, the agent's expli
 
 ## Metrics
 
-Every problem reports `average_normalized_quality`, `optimality_rate`, `feasibility_rate`, and `average_runtime_ms` (external exact baselines additionally report `proved_optimal_rate` and `average_external_runtime_ms`). Quality is normalized to `[0, 1]` where `1.0` is optimal and invalid/infeasible outputs score `0`:
+Every problem reports `average_normalized_quality`, `optimality_rate`, `feasibility_rate`, and `average_runtime_ms` (external exact baselines additionally report `proved_optimal_rate` and `average_external_runtime_ms`). Quality is normalized to $[0, 1]$ where $1.0$ is optimal and invalid/infeasible outputs score $0$:
 
 | Problem | Normalized quality |
-| --- | --- |
-| Coloring | optimum colors / returned colors |
-| MAXSAT | satisfied / optimum satisfied clauses |
-| MIS | returned IS size / optimum IS size |
-| MDS | optimum DS size / returned DS size |
-| Packing LP, MDKP | returned objective / optimum objective |
-| TSP | optimum tour length / returned tour length |
+| --- | :---: |
+| Coloring | $k_{\mathrm{opt}} / k_{\mathrm{alg}}$ |
+| MAXSAT | $\mathrm{sat}_{\mathrm{alg}} / \mathrm{sat}_{\mathrm{opt}}$ |
+| MIS | $\lvert \mathrm{IS}_{\mathrm{alg}} \rvert / \lvert \mathrm{IS}_{\mathrm{opt}} \rvert$ |
+| MDS | $\lvert \mathrm{DS}_{\mathrm{opt}} \rvert / \lvert \mathrm{DS}_{\mathrm{alg}} \rvert$ |
+| Packing LP, MDKP | $\mathrm{obj}_{\mathrm{alg}} / \mathrm{obj}_{\mathrm{opt}}$ |
+| TSP | $\mathrm{len}_{\mathrm{opt}} / \mathrm{len}_{\mathrm{alg}}$ |
 
 **Notes.** Exact optima are computed at generation time and stored per instance. OR-Tools is the exact backend for graph problems and the packing pair (`GLOP` for `packing_lp`, CP-SAT for `mdkp`). Gurobi is a *timed industrial baseline only* and never replaces stored-optimum generation. The LLM generator uses structured outputs and the system prompt in [`dasbench/prompts/llm_system_prompt.txt`](dasbench/prompts/llm_system_prompt.txt).
 
@@ -255,7 +259,23 @@ Every problem reports `average_normalized_quality`, `optimality_rate`, `feasibil
 
 ## Theory in one paragraph
 
-For a fixed solver library, the empirically *fastest sample-consistent* solver generalizes in both correctness and runtime: it approaches the best correct distribution-specialized solver in the class up to an `O(T_max·√(log|C|/n))` term. For identifiable hint classes with a score margin `γ`, only `O(γ⁻² log(N/δ))` samples suffice to recover the hidden hint exactly. A concrete instantiation — hidden SAT backdoors — shows samples improving *computation* without ever learning correctness: fallback preserves validity, while the recovered backdoor yields exponential per-instance speedup. Proofs are in the paper appendix.
+**Runtime-aware library selection.** For a fixed solver class $\mathcal{C}$, the empirically *fastest sample-consistent* solver $\widehat{c}_S$ generalizes in both correctness and runtime. With probability $\geq 1 - \delta$ over $S \sim D^n$, its deployment runtime satisfies
+
+$$
+\mathrm{Run}_D(\widehat{c}_S) \;\le\; \inf_{c \,\in\, \mathcal{C}^{\mathrm{feas}}} \mathrm{Run}_D(c) \;+\; O\!\left( T_{\max} \sqrt{\tfrac{\log \lvert \mathcal{C} \rvert}{n}} \right),
+$$
+
+so it approaches the best *correct* distribution-specialized solver in the class, while sample consistency controls deployment error.
+
+**Hint recovery.** For an identifiable hint class with score margin $\gamma > 0$ over $\lvert \mathcal{H} \rvert = N$ candidates,
+
+$$
+n \;\ge\; \frac{2}{\gamma^{2}} \log \frac{2N}{\delta}
+$$
+
+samples suffice to recover the hidden hint $h^\star$ exactly with probability $\geq 1 - \delta$ — logarithmic in $N$, inverse-quadratic in the margin.
+
+**A concrete instance — hidden SAT backdoors.** Here samples improve *computation* without ever learning correctness: a complete solver is always available, fallback preserves validity, and the recovered backdoor $\widehat{B}$ yields per-instance runtime $O(2^{k}\,\mathrm{poly}(\lvert F \rvert))$ on the deployment distribution. Proofs are in the paper appendix.
 
 ---
 
@@ -270,12 +290,14 @@ The one-time synthesis cost only pays off when amortized over enough future inst
 If you use this work, please cite:
 
 ```bibtex
-@misc{koganti2026distributionaware,
-  title  = {Distribution-Aware Algorithm Design with LLM Agents},
-  author = {Koganti, Saharsh and Mishra, Priyadarsi and Beneventano, Pierfrancesco and Galanti, Tomer},
-  year   = {2026},
-  note   = {Preprint},
-  url    = {https://github.com/DLFundamentals/Program_Learning}
+@misc{koganti2026distributionawarealgorithmdesignllm,
+      title={Distribution-Aware Algorithm Design with LLM Agents}, 
+      author={Saharsh Koganti and Priyadarsi Mishra and Pierfrancesco Beneventano and Tomer Galanti},
+      year={2026},
+      eprint={2605.14141},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2605.14141}, 
 }
 ```
 
